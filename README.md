@@ -40,6 +40,18 @@ docsify serve 启动项目
 - **[13 Vue](./学习/13%20offer收割机之Vue篇.md)**
 - **[14 Vue性能优化](./学习/14%20vue项目的性能优化.md)**
 - **[15 React18新特性](./学习/15%20offer收割机之react18新特性.md)**
+- **[16 vue3](./学习/16%20offer收割机之Vue3.md)**
+- **[17 es6+](./学习/17%20offer收割机之ES6+新特性.md)**
+- **[18 设计模式](./学习/18%20offer收割机之设计模式.md)**
+- **[19 nodejs](./学习/20%20offer收割机之NodeJs.md)**
+- **[20 promise场景题](./学习/21%20offer收割机之promise场景题.md)**
+- **[21 V8原理](./学习/22%20offer收割机之V8原理.md)**
+- **[22 浏览器Puppeteer](./学习/23%20offer收割机之无头浏览器Puppeteer.md)**
+- **[23 webpack](./学习/24%20offer收割机之webpack.md)**
+- **[24 Typescript](./学习/25%20offer收割机之TypeScript篇.md)**
+- **[25 事件循环机制](./学习/26%20offer收割机之事件循环机制.md)**
+- **[26 webpack5新特性](./学习/27%20offer收割机之webpack5新特性.md)**
+- **[27 手写js大全](./学习/32.%20JS手写题大全.md)**
 
 ### 00-前端工具
 
