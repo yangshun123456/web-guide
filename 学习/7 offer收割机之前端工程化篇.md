@@ -34,6 +34,13 @@ git merge 和 git rebase 都是用于分支合并，关键**在** **commit 记�
 - git merge 会新建一个新的 commit 对象，然后两个分支以前的 commit 记录都指向这个新 commit 记录。这种方法会保留之前每个分支的 commit 历史。
 - git rebase 会先找到两个分支的第一个共同的 commit 祖先记录，然后将提取当前分支这之后的所有 commit 记录，然后将这个 commit 记录添加到目标分支的最新提交后面。经过这个合并后，两个分支合并后的 commit 记录就变为了线性的记录了。
 
+### 5. git revert 和 git reset的区别
+- reset是彻底回退到指定的commit版本，该commit后的所有commit都将被清除，包括提交历史记录；
+- revert仅仅是撤销指定commit的修改，并不影响后续的commit，但所撤销的commit被后续的commit修改了同一地方则会产生冲突；
+- reset执行后不会产生记录，revert执行后会产生记录；
+- reset执行后无法再次恢复，revert执行后因为不会清除记录，并且会产生新纪录，所以文件不会丢失，你可以多次执行revert恢复到某次改变之前的状态；
+- reset执行后HEAD会后移，而revert的HEAD则一直是向前的；
+
 ## 二、Webpack
 
 ### 1. **webpack**与**grunt**、**gulp**的不同？ 
