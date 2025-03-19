@@ -192,7 +192,7 @@ webpack的热更新⼜称热替换（Hot Module Replacement），缩写为HMR。
 
 ## 三、其他
 
-### **1. Babel**的原理是什么**?** 
+### **1. Babel**的原理是什么 **?** 
 
 babel 的转译过程也分为三个阶段，这三步具体是： 
 
@@ -201,3 +201,81 @@ babel 的转译过程也分为三个阶段，这三步具体是：
 - **⽣成 Generate**: 将变换后的 AST 再转换为 JS 代码, 使⽤到的模块是 babel-generator。
 
 ![image.png](https://cdn.nlark.com/yuque/0/2021/png/1500604/1615908675152-69682ae3-d0b3-4552-a32e-39c2022b1db0.png?x-oss-process=image%2Fresize%2Cw_1500)
+
+### **2. Babel**Plugins **?** 
+- Plugins顾名思义插件。
+- babel 本身不具有任何转化功能，我们要的代码要转换某些功能，比如将es6转换为es5，我们就需要下载相应的插件，并且将这些插件配置到.babelrc文件的plguins里面。、
+比如将箭头函数转换为浏览器能识别的普通函数
+我们就需要用到 @babel/plugin-transform-arrow-functions插件，并将其添加到配置文件
+- 1.首先下载插件 npm i @babel/plugin-transform-arrow-functions -D
+- 2.添加至配置文件
+```json
+{
+    "plugins":[
+		  "@babel/plugin-transform-arrow-functions"
+		]
+}
+```
+这样babel就能够将箭头函数转换为普通函数了
+```javascript
+//转换前
+var a = () => {};
+//转换后
+var a = function () {};
+```
+
+### **3. Babel**Presets(预设) **?** 
+Presets顾名思义预设。
+我们要转换一些语法就得使用各种插件，并且添加到配置文件，如果每次项目需要的babel插件都差不多，而我们每次都要进行重复的下载，配置工作，这样效率是不是很低，很繁琐。
+这个时候我们就可以利用presets这个功能，将一些常用的babel插件，配置放入预设中，下载直接将这个预设放入配置文件即可
+- 如假设预设为 myPreset，那么在配置文件
+```json
+{
+    "presets":["myPreset"]
+}
+```
+当然除了我们自定义预设，我们还可以使用别人定义好的一些预设，如你经常看到的
+<font color="red">@babel/preset-env、@babel/preset-react、@babel/preset-typescript</font>
+
+### **3. Babel**polyfill(垫片) **?** 
+Plolyfill 垫片。
+babel默认只转换新的 JavaScript 语法，比如箭头函数、扩展运算（spread）。
+不转换新的 API，例如Iterator、Generator、Set、Maps、Proxy、Reflect、Symbol、Promise 等全局对象，以及一些定义在全局对象上的方法（比如 Object.assign）都不会转译。如果想使用这些新的对象和方法，则需要为当前环境提供一个垫片（polyfill）。
+
+- @babel/polyfill（不推荐，会污染全局环境，改写全局prototype，不建议使用）
+  > 这个库里包含 regenerator 和 core-js。\
+  > regenerator: 项目中要使用async、await函数就必须使用这个库 \
+  > core-js: JavaScript的模块化标准库。包括到2021年的ECMAScript的Polyfill: promises、symbols、 collections 、iterators、 typed 、arrays、许多其他特性、ECMAScript提案、跨平台WHATWG / W3C特性和提案，比如URL。您可以只加载所需的特性，或者在不污染全局命名空间的情况下使用它。\
+  > 粗暴的理解就是，你要使用一些js高级特性如promise就得使用这个库。
+  
+由于babel只能将es6+语法转换为低级语法，而当我们使用一些高级特性时比如 async、await类似的Api，babel就显得无能为力了，因为babel无法实现这些高级Api的功能，这个时候就需要一个垫片（polyfill），而babel又包含了一个polyfill叫@babel/polyfill这个polyfill本身也无法实现像async等高级API的功能，但是市面上有现成的封装好的类库实现了，于是@babel/polyfill将他们包含进来。这样当我们引入@babel/polyfill时，就可以丝滑的写高级语法了！
+
+- babel-runtime
+> 解决 @babel/polyfill带来的污染问题 \
+> babel-runtime 更像是一种按需加载的实现，比如你哪里需要使用 Promise，只要在这个文件头部 require Promise from ‘babel-runtime/core-js/promise’就行了
+
+不过如果你许多文件都要使用 Promise，难道每个文件都要 import 一遍不成？
+- babel-plugin-transform-runtime
+> 解决手动 require 的苦恼,它会分析我们的 ast 中，是否有引用 babel-rumtime 中的垫片（通过映射关系），如果有，就会在当前模块顶部插入我们需要的垫片
+```javascript
+module.exports = {
+    presets: [
+        [
+            "@babel/preset-env",
+        ]
+    ],
+    plugins: [
+        [
+            "@babel/plugin-transform-runtime",
+            {
+                corejs: {version: 3, proposals: true},
+                helpers: true,
+                useESModules: true,
+                regenerator: true,
+                absoluteRuntime: "./node_modules"
+            }
+        ]
+    ]
+};
+
+```
