@@ -71,6 +71,8 @@ git merge 和 git rebase 都是用于分支合并，关键**在** **commit 记�
 - css-loader：加载 CSS，⽀持模块化、压缩、⽂件导⼊等特性 
 - style-loader：把 CSS 代码注⼊到 JavaScript 中，通过 DOM 操作去加载 CSS。 
 - eslint-loader：通过 ESLint 检查 JavaScript 代码 
+- cache-loader：缓存处理过的文件，避免重复工作，提高构建速度。
+- thread-loader：是最简单且直接的多线程插件之一，它通过在现有的加载器前添加一个额外的并行层来加速构建。配置起来非常简单
 
 
 
@@ -83,7 +85,9 @@ git merge 和 git rebase 都是用于分支合并，关键**在** **commit 记�
 - uglifyjs-webpack-plugin：通过 UglifyES 压缩 ES6 代码 
 - webpack-parallel-uglify-plugin: 多核压缩，提⾼压缩速度 
 - webpack-bundle-analyzer: 可视化webpack输出⽂件的体积 
+- terser-webpack-plugin：它是 uglifyjs-webpack-plugin 的替代品，压缩js代码
 - mini-css-extract-plugin: CSS提取到单独的⽂件中，⽀持按需加载 
+- css-minimizer-webpack-plugin： Webpack 官方推荐用于压缩 CSS 的插件。它可以压缩 CSS 文件，删除冗余代码，优化文件体积。
 
 ### 5. **bundle**，**chunk**，**module**是什么？
 
