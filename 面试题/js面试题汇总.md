@@ -731,3 +731,141 @@ window.addEventListener('message',(event)=>{
 
 ### 监听安卓物理键使用popstate事件监听时ios返回不刷新
 > - 判断设备，当是ios的时候用window.location.href
+
+## Web Components
+> - 允许你创建自定义的 HTML 标签
+> - 为自定义元素提供封装的 DOM，使得它们与外部样式和脚本隔离。
+> - 提供一种在 DOM 中定义可重用结构的机制
+
+### shadowdom
+在传统的 Web 开发中，HTML 元素和 CSS 样式是全局的。多个组件或者元素之间可能会相互影响，导致样式冲突或者事件干扰。例如
+> - 组件的样式可能会受到页面全局样式的影响，导致显示问题。
+> - 页面中多个组件的事件可能会互相干扰，无法独立工作。
+
+通过使用 Shadow DOM，我们可以为每个组件创建一个封闭的子 DOM，确保：
+> - 样式封装：组件内部的 CSS 不会影响到外部，外部的样式也不会影响到组件内部。
+> - 结构封装：组件的 HTML 结构在 Shadow DOM 中被封装，不会暴露给外部。
+> - 事件封装：组件内部的事件可以被封装，不会冒泡到外部，外部也无法直接访问内部事件。
+
+Shadow DOM 的模式
+> - open 模式：在 open 模式下，组件的 Shadow DOM 是可以从外部访问的（通过 element.shadowRoot）。
+> - closed 模式：在 closed 模式下，组件的 Shadow DOM 是封闭的，无法通过 element.shadowRoot 访问到。
+
+创建一个shadow dom
+```javascript
+const element = document.querySelector('my-element');
+const shadowRoot = element.attachShadow({mode: 'open'}); // 可以是 'open' 或 'closed'
+```
+
+### Web Components
+生命周期如下：
+> - connectedCallback： 当 custom element 自定义标签首次被插入文档 DOM 时，被调用，类似于 Vue 中的 mounted 周期函数
+> - disconnectedCallback：当 custom element 从文档 DOM 中删除时，被调用，类似于 Vue 中的 destroyed 周期函数
+> - attributeChangedCallback: 当静态属性 observedAttributes 中定义的属性被添加、修改、移除或替换时被调用
+
+```javascript
+class MyButton extends HTMLElement {
+  // 在元素首次连接到 DOM 时调用
+  connectedCallback() {
+    this.render();
+  }
+
+  connectedCallback() {
+    console.log('Element connected to the DOM')
+  }
+
+  disconnectedCallback() {
+    console.log('Element removed from the DOM')
+  }
+
+  adoptedCallback() {
+    console.log('Element moved to a new document')
+  }
+
+  attributeChangedCallback(name, oldValue, newValue) {
+    console.log(`Attribute ${name} changed from ${oldValue} to ${newValue}`)
+  }
+
+  // 渲染 HTML 内容
+  render() {
+    // 创建 Shadow DOM
+    const shadow = this.attachShadow({ mode: 'open' });
+
+    // 使用模板
+    const template = document.createElement('template');
+    template.innerHTML = `
+      <style>
+        button {
+          background-color: #4CAF50;
+          border: none;
+          color: white;
+          padding: 15px 32px;
+          text-align: center;
+          text-decoration: none;
+          display: inline-block;
+          font-size: 16px;
+          margin: 4px 2px;
+          cursor: pointer;
+          border-radius: 8px;
+          transition: background-color 0.3s;
+        }
+        button:hover {
+          background-color: #45a049;
+        }
+      </style>
+      <button><slot>Click me!</slot></button>
+    `;
+
+    // 将模板内容添加到 Shadow DOM 中
+    shadow.appendChild(template.content.cloneNode(true));
+
+    // 获取 Shadow DOM 中的按钮元素
+    const button = shadow.querySelector('button');
+
+    // 绑定点击事件
+    button.addEventListener('click', () => {
+      alert('Button clicked!');
+    });
+  }
+}
+
+// 注册自定义元素
+customElements.define('my-button', MyButton);
+```
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Component Example</title>
+</head>
+<body>
+
+  <!-- 使用自定义按钮组件 -->
+  <my-button></my-button>
+  <my-button>Click me again!</my-button>
+
+  <script src="my-button.js"></script>
+</body>
+</html>
+
+```
+
+## 微前端方案
+
+### 微前端设计原则
+> - 各个应用独立开发，不耦合
+> - 各个应用可以独立部署
+> - 各个应用可以独立拓展，不依赖其他的微应用
+> - 所有应用集成在一个主应用上，在同一个页面上运行
+
+### iframe
+优点
+> - 实现简单
+> - 天然具有隔离性，通过postmessage进行通信，或者通过修改url的参数传递参数给父业面
+缺点
+> - url不同步，如果刷新页面，iframe的状态无法保留，会回到初始页
+> - ui不同步，如果是半页面嵌套的话（如后台管理系统），修改样式很麻烦
+> - 上下文完全隔离，iframe需要通过postmessage进行通信后才能拿到登录态以及用户信息
+> - 会阻碍主应用的加载，且每一次进入都会重新加载
