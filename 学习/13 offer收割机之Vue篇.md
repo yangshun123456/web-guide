@@ -624,46 +624,228 @@ LRU（Least rencently used）算法根据数据的历史访问记录来进行淘
 - 链表满的时候，将链表尾部的数据丢弃。
 
 ### 18. $nextTick 原理及作用
+#### 一、NextTick是什么
 
-Vue 的 nextTick 其本质是对 JavaScript 执行原理 EventLoop 的一种应用。
+官方对其的定义
 
+> 在下次 DOM 更新循环结束之后执行延迟回调。在修改数据之后立即使用这个方法，获取更新后的 DOM
 
+什么意思呢？
 
-nextTick 的核心是利用了如 Promise 、MutationObserver、setImmediate、setTimeout的原生 JavaScript 方法来模拟对应的微/宏任务的实现，本质是为了利用 JavaScript 的这些异步回调任务队列来实现 Vue 框架中自己的异步回调队列。
+我们可以理解成，`Vue` 在更新 `DOM` 时是异步执行的。当数据发生变化，`Vue`将开启一个异步更新队列，视图需要等队列中所有数据变化完成之后，再统一进行更新
 
+举例一下
 
+`Html`结构
 
-nextTick 不仅是 Vue 内部的异步队列的调用方法，同时也允许开发者在实际项目中使用这个方法来满足实际应用中对 DOM 更新数据时机的后续逻辑处理
-
-
-
-nextTick 是典型的将底层 JavaScript 执行原理应用到具体案例中的示例，引入异步更新队列机制的原因∶
-
-- 如果是同步更新，则多次对一个或多个属性赋值，会频繁触发 UI/DOM 的渲染，可以减少一些无用渲染
-- 同时由于 VirtualDOM 的引入，每一次状态发生变化后，状态变化的信号会发送给组件，组件内部使用 VirtualDOM 进行计算得出需要更新的具体的 DOM 节点，然后对 DOM 进行更新操作，每次更新状态后的渲染过程需要更多的计算，而这种无用功也将浪费更多的性能，所以异步渲染变得更加至关重要
-
-
-
-Vue采用了数据驱动视图的思想，但是在一些情况下，仍然需要操作DOM。有时候，可能遇到这样的情况，DOM1的数据发生了变化，而DOM2需要从DOM1中获取数据，那这时就会发现DOM2的视图并没有更新，这时就需要用到了`nextTick`了。
-
-
-
-由于Vue的DOM操作是异步的，所以，在上面的情况中，就要将DOM2获取数据的操作写在`$nextTick`中。
-
+```html
+<div id="app"> {{ message }} </div>
 ```
-this.$nextTick(() => {
-    // 获取数据的操作...
+
+构建一个`vue`实例
+
+```js
+const vm = new Vue({
+  el: '#app',
+  data: {
+    message: '原始值'
+  }
 })
 ```
 
-所以，在以下情况下，会用到nextTick：
+修改`message`
 
-- 在数据变化后执行的某个操作，而这个操作需要使用随数据变化而变化的DOM结构的时候，这个操作就需要方法在`nextTick()`的回调函数中。
-- 在vue生命周期中，如果在created()钩子进行DOM操作，也一定要放在`nextTick()`的回调函数中。
+```js
+this.message = '修改后的值1'
+this.message = '修改后的值2'
+this.message = '修改后的值3'
+```
+
+这时候想获取页面最新的`DOM`节点，却发现获取到的是旧值
+
+```js
+console.log(vm.$el.textContent) // 原始值
+```
+
+这是因为`message`数据在发现变化的时候，`vue`并不会立刻去更新`Dom`，而是将修改数据的操作放在了一个异步操作队列中
+
+如果我们一直修改相同数据，异步操作队列还会进行去重
+
+等待同一事件循环中的所有数据变化完成之后，会将队列中的事件拿来进行处理，进行`DOM`的更新
+
+#### 为什么要有nexttick
+
+举个例子
+```js
+{{num}}
+for(let i=0; i<100000; i++){
+    num = i
+}
+```
+如果没有 `nextTick` 更新机制，那么 `num` 每次更新值都会触发视图更新(上面这段代码也就是会更新10万次视图)，有了`nextTick`机制，只需要更新一次，所以`nextTick`本质是一种优化策略
+
+#### 二、使用场景
+
+如果想要在修改数据后立刻得到更新后的`DOM`结构，可以使用`Vue.nextTick()`
+
+第一个参数为：回调函数（可以获取最近的`DOM`结构）
+
+第二个参数为：执行函数上下文
+
+```js
+// 修改数据
+vm.message = '修改后的值'
+// DOM 还没有更新
+console.log(vm.$el.textContent) // 原始的值
+Vue.nextTick(function () {
+  // DOM 更新了
+  console.log(vm.$el.textContent) // 修改后的值
+})
+```
+
+组件内使用 `vm.$nextTick()` 实例方法只需要通过`this.$nextTick()`，并且回调函数中的 `this` 将自动绑定到当前的 `Vue` 实例上
+
+```js
+this.message = '修改后的值'
+console.log(this.$el.textContent) // => '原始的值'
+this.$nextTick(function () {
+    console.log(this.$el.textContent) // => '修改后的值'
+})
+```
+
+`$nextTick()` 会返回一个 `Promise` 对象，可以是用`async/await`完成相同作用的事情
+
+```js
+this.message = '修改后的值'
+console.log(this.$el.textContent) // => '原始的值'
+await this.$nextTick()
+console.log(this.$el.textContent) // => '修改后的值'
+```
+
+#### 三、实现原理
+
+源码位置：`/src/core/util/next-tick.js`
+
+`callbacks`也就是异步操作队列
+
+`callbacks`新增回调函数后又执行了`timerFunc`函数，`pending`是用来标识同一个时间只能执行一次
+
+```javascript
+export function nextTick(cb?: Function, ctx?: Object) {
+  let _resolve;
+
+  // cb 回调函数会经统一处理压入 callbacks 数组
+  callbacks.push(() => {
+    if (cb) {
+      // 给 cb 回调函数执行加上了 try-catch 错误处理
+      try {
+        cb.call(ctx);
+      } catch (e) {
+        handleError(e, ctx, 'nextTick');
+      }
+    } else if (_resolve) {
+      _resolve(ctx);
+    }
+  });
+
+  // 执行异步延迟函数 timerFunc
+  if (!pending) {
+    pending = true;
+    timerFunc();
+  }
+
+  // 当 nextTick 没有传入函数参数的时候，返回一个 Promise 化的调用
+  if (!cb && typeof Promise !== 'undefined') {
+    return new Promise(resolve => {
+      _resolve = resolve;
+    });
+  }
+}
+```
+
+`timerFunc`函数定义，这里是根据当前环境支持什么方法则确定调用哪个，分别有：
+
+`Promise.then`、`MutationObserver`、`setImmediate`、`setTimeout`
+
+通过上面任意一种方法，进行降级操作
+
+```js
+export let isUsingMicroTask = false
+if (typeof Promise !== 'undefined' && isNative(Promise)) {
+  //判断1：是否原生支持Promise
+  const p = Promise.resolve()
+  timerFunc = () => {
+    p.then(flushCallbacks)
+    if (isIOS) setTimeout(noop)
+  }
+  isUsingMicroTask = true
+} else if (!isIE && typeof MutationObserver !== 'undefined' && (
+  isNative(MutationObserver) ||
+  MutationObserver.toString() === '[object MutationObserverConstructor]'
+)) {
+  //判断2：是否原生支持MutationObserver
+  let counter = 1
+  const observer = new MutationObserver(flushCallbacks)
+  const textNode = document.createTextNode(String(counter))
+  observer.observe(textNode, {
+    characterData: true
+  })
+  timerFunc = () => {
+    counter = (counter + 1) % 2
+    textNode.data = String(counter)
+  }
+  isUsingMicroTask = true
+} else if (typeof setImmediate !== 'undefined' && isNative(setImmediate)) {
+  //判断3：是否原生支持setImmediate
+  timerFunc = () => {
+    setImmediate(flushCallbacks)
+  }
+} else {
+  //判断4：上面都不行，直接用setTimeout
+  timerFunc = () => {
+    setTimeout(flushCallbacks, 0)
+  }
+}
+```
+
+无论是微任务还是宏任务，都会放到`flushCallbacks`使用
+
+这里将`callbacks`里面的函数复制一份，同时`callbacks`置空
+
+依次执行`callbacks`里面的函数
+
+```js
+function flushCallbacks () {
+  pending = false
+  const copies = callbacks.slice(0)
+  callbacks.length = 0
+  for (let i = 0; i < copies.length; i++) {
+    copies[i]()
+  }
+}
+```
+
+**小结：**
+
+> - nextTick中维护了一个callbacks队列，一个pending锁，一个timerFunc。
+    这个timerFunc就是根据浏览器环境判断得出的一个能够产生微任务或降级为宏任务的api调用，比如promise.then。
+    callbacks队列的作用是收集当前正在执行的宏任务中所有的nextTick回调，等当前宏任务执行完之后好一次性for循环啪执行完。
+    试想如果没有callback队列的话，每次调用nextTick都去创建一个timerFunc微任务（假设支持），那么也就不需要pending锁了。
+    现在有了callbacks队列的情况下就只需要创建一个timerFunc微任务，那问题是什么时候创建该微任务呢？
+    这里就要讲到pending了，在pending为false的时候表示第一次添加cb到callbacks中，这时候创建一个timerFunc微任务，并加锁。
+    后面调用nextTick就只是往callbacks添加回调。
+    等当前宏任务之后完之后，就会去执行timerFunc清空callbacks队列，并设置pending为false，一切归零
 
 
+1. 把回调函数放入callbacks等待执行
+2. 将执行函数放到微任务或者宏任务中
+3. 事件循环到了微任务或者宏任务，执行函数依次执行callbacks中的回调
 
-因为在created()钩子函数中，页面的DOM还未渲染，这时候也没办法操作DOM，所以，此时如果想要操作DOM，必须将操作的代码放在`nextTick()`的回调函数中。
+**参考文献 **
+
+- https://juejin.cn/post/6844904147804749832
+
+
 
 ### **19. Vue 中给 data 中的对象属性添加一个新的属性时会发生什么？如何解决？**
 
